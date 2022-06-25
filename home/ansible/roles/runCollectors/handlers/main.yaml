@@ -1,0 +1,9 @@
+---
+- name: Build appCollector image
+  docker_image:
+    name: "collector:{{ image_tag }}"
+    force: yes
+    build:
+      path: /tmp/appDockerfiles/
+    source: build
+

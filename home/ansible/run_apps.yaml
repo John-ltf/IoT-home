@@ -1,0 +1,23 @@
+---
+- hosts: all
+  become_user: root
+  become: yes
+  roles:
+    - role: installDocker
+      tags: installDocker
+
+- hosts: devices
+  become_user: root
+  become: yes
+  roles:
+  - role: runCollectors
+    vars:
+       path: "{{ collectorPath }}"
+    tags: runCollectors
+
+- hosts: mqttHost
+  become_user: root
+  become: yes
+  roles:
+  - role: runMQTT
+    tags: runMQTT

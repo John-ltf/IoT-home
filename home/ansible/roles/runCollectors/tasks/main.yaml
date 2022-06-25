@@ -1,0 +1,35 @@
+- name: Include vars of vars.yaml
+  include_vars: vars.yaml
+
+- name: Print collector List
+  debug:
+    msg: "Found app: {{ item.name }}"
+  loop: "{{ collectors }}"
+
+- name: Creates remote dockerfile directory
+  file:
+    path: /tmp/appDockerfiles/
+    state: directory
+
+- name: Copy Dockerfile and app files
+  copy:
+    src: "{{ path }}/"
+    dest: /tmp/appDockerfiles/
+    remote_src: no
+    mode: preserve
+  notify:
+    - Build appCollector image
+
+- name: Force all notified handlers to run at this point, not waiting for normal sync points
+  meta: flush_handlers
+
+- name: Find MAC addresses
+  script: "{{ path }}/scripts/get-mac-adress.sh {{ item.name }}" 
+  register: deviceResults
+  loop: "{{ collectors }}"
+
+- include_tasks: run_device_containers.yaml
+  loop: "{{ deviceResults.results }}"
+  loop_control:
+    loop_var: outer_item
+
