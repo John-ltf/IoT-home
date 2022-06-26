@@ -6,17 +6,26 @@
     msg: "Found app: {{ item.name }}"
   loop: "{{ collectors }}"
 
-- name: Creates remote dockerfile directory
-  file:
-    path: /tmp/appDockerfiles/
-    state: directory
+#- name: Creates remote dockerfile directory
+#  file:
+#    path: /tmp/appDockerfiles/
+#    state: directory
+
+#- name: Copy Dockerfile and app files
+#  copy:
+#    src: "{{ path }}/"
+#    dest: /tmp/appDockerfiles/
+#    mode: preserve
+#    directory_mode: yes
+#  notify:
+#    - Build appCollector image
 
 - name: Copy Dockerfile and app files
-  copy:
+  synchronize:
     src: "{{ path }}/"
-    dest: /tmp/appDockerfiles/
-    remote_src: no
-    mode: preserve
+    dest: /tmp/appDockerfiles
+    delete: yes
+    recursive: yes
   notify:
     - Build appCollector image
 

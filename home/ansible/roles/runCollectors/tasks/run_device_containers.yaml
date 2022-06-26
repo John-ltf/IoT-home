@@ -11,3 +11,5 @@
     privileged: yes
     network_mode: host
   loop: "{{ outer_item.stdout_lines }}"
+  when: outer_item.stdout_lines != ""
+
