@@ -1,6 +1,8 @@
 import paho.mqtt.client as mqtt
 from abc import ABCMeta, abstractmethod
 import logging
+import time
+import sys
 
 def on_connect(mqttc, obj, flags, rc):
   if rc == 0:
@@ -37,8 +39,26 @@ class mqttClient:
       self._mqttc.on_connect = on_connect
       self._mqttc.on_publish = on_publish
       self._mqttc.on_subscribe = on_subscribe
+     
+      self.connectToMqtt()
 
-      self._mqttc.connect(self._mqttHost, self._port, self._keepalive)
+    def connectToMqtt(self):
+        connectionErrors = 0
+        connected = True
+        while True:
+            try:
+                self._mqttc.connect(self._mqttHost, self._port, self._keepalive)
+            except Exception as e:
+                logging.exception(e)
+                connected = False
+                connectionErrors += 1
+                if connectionErrors == 5:
+                    logging.error("Too many tries. Exiting..")
+                    sys.exit(e.errno)
+                time.sleep(10)
+            if connected:
+                break
+
 
 class mqttProducer(mqttClient):
   def __init__(self, ID: str, mqttHost: str, mqttPort: int, keepalive: int = 60, qos: int = 2):

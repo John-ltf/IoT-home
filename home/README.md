@@ -43,9 +43,9 @@ and the configuration file of MQTT is [here](https://github.com/John-ltf/smartHo
 
 ## Collector Application
 
-The `appCollector/src` folder includes a [python application](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/appCollector/src/collectData.py) that collects data from Xiaomi Mijia BLE Sensors.
+The `appCollector/src` folder includes a [python application](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/appCollector/src/collectData.py) that collects data from sensor devices.
 
-The code allows extendability to support more devices by adding new classes which collect data collection by various devices/sensors.
+The code allows extendability to support more devices by adding new classes which collect data collection by various sensor devices.
 
 This is achieved by dynamically loading a python class which implements the inerface of the [collectorI](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/appCollector/src/collectors/collectorInterface.py)
 interface.

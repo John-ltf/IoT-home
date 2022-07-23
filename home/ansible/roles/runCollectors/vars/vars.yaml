@@ -1,5 +1,6 @@
 collectors:
-  - { 'name': 'LYWSD03MMC', 'interval': 300 }
+  - { 'name': 'LYWSD03MMC', 'interval': 100 }
+  - { 'name': 'MIBFS', 'interval': 20 }
 image_tag: '1.0'
 mqttHost: 127.0.0.1
 mqttPort: 1883

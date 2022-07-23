@@ -70,7 +70,6 @@ if __name__ == "__main__":
                         default="telemetry",
                         help='Topic Name')
     args =  parser.parse_args()
-
     logging.basicConfig(format="%(asctime)s: %(levelname)s - %(message)s", level=args.loglevel)
     
     collect(args.interval,

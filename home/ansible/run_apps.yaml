@@ -6,6 +6,13 @@
     - role: installDocker
       tags: installDocker
 
+- hosts: mqttHost
+  become_user: root
+  become: yes
+  roles:
+  - role: runMQTT
+    tags: runMQTT
+
 - hosts: devices
   become_user: root
   become: yes
@@ -15,9 +22,3 @@
        path: "{{ playbook_dir }}/../appCollector/"
     tags: runCollectors
 
-- hosts: mqttHost
-  become_user: root
-  become: yes
-  roles:
-  - role: runMQTT
-    tags: runMQTT
