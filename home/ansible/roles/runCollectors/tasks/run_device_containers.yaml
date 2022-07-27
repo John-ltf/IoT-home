@@ -10,6 +10,8 @@
     recreate: yes
     privileged: yes
     network_mode: host
+    volumes:
+      - /var/lock/bluetooth.lock:/var/lock/bluetooth.lock
   loop: "{{ outer_item.stdout_lines }}"
   when: 
       - outer_item.stdout_lines != ""

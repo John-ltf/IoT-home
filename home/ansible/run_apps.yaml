@@ -11,6 +11,10 @@
   become: yes
   roles:
   - role: runMQTT
+    vars:
+      IoTHubName: "{{IoTHubName}}"
+      deviceId:   "{{deviceId}}"
+      sas:        "{{ sas}}"
     tags: runMQTT
 
 - hosts: devices

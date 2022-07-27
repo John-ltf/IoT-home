@@ -26,13 +26,23 @@ ansible-playbook -i hosts.yaml run_apps.yaml
 ```
 
 You may need:
+1. Provide the Azure IoT Hub name using the variable `IoTHubName`
+2. Provide the device ID that is registered on Azure IoT Hub name using the variable `deviceId`
+3. Provide the SAS token that has been generated for the given device using the variable `sas`
 1. To skip the installation of docker by adding `-t runCollectors,runMQTT`
 2. To ovveride the pre-configured python 2.x by adding `-e 'ansible_python_interpreter=/usr/bin/python3`
 3. To give as argument the root password by adding `--extra-vars "ansible_sudo_pass=<PASSWORD>"`
 
+The complete ansible command should look like:
+
+`ansible-playbook -i hosts.yaml run_apps.yaml -e 'ansible_python_interpreter=/usr/bin/python3' -t runCollectors,runMQTT --extra-vars "ansible_sudo_pass=<value> IoTHubName=<value> deviceId=<vale> sas='<value>'"`
+
 After the installation of playbook, the below will be up and running:
 1. A docker container collecting data from Xiaomi Mijia BLE Sensor and sending them to MQTT
 2. An MQTT instance
+3. A python proccess that replicates the messages from local broker to Azure IoT Hub
+
+Note: The sensor devices must be available during ansible runtime to be discovered by the host bluetooth
 
 ## Configuration
 

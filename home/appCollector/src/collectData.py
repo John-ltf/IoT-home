@@ -3,6 +3,7 @@ import logging
 import json
 import importlib
 import time
+from bluetoothExclusiveAccess import bluetoothExclusiveAccess
 from mqtt.mqttHandler import mqttProducer 
 
 def collect(interval: int, collectorClass: str, mac: str, mqttHost: str, mqttPort: int, mqttTopic: str):
@@ -16,9 +17,13 @@ def collect(interval: int, collectorClass: str, mac: str, mqttHost: str, mqttPor
     logging.info('Connecting to MQTT')
     mqttc = mqttProducer(ID=instance.getID(), mqttHost=mqttHost, mqttPort=mqttPort)
 
+    exclusive = bluetoothExclusiveAccess(appId = instance.getID())
+ 
     while(True):
+        exclusive.acquire()
         logging.debug(f'Collecting Data')
         instance.collectData()
+        exclusive.release()
         if instance.dataCollected():
           logging.info(instance.getData())
           mqttc.send(mqttTopic, instance.getData())

@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 import time
-from mqttHandler import mqttProducer
+from mqttHandler import mqttConsumer, mqttProducerSecured
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='MQTT Producer')
@@ -18,7 +18,7 @@ if __name__ == "__main__":
     parser.add_argument('--id', 
                         type=str,
                         nargs='?',
-                        default="producer",
+                        default="replicator",
                         help='Client ID')
     parser.add_argument('--mqttHost', 
                         type=str,
@@ -30,6 +30,30 @@ if __name__ == "__main__":
                         nargs='?',
                         default=1883,
                         help='MQTT port')
+    parser.add_argument('--iotHubName',
+                        type=str,
+                        nargs='?',
+                        default="iot-hub-ltf",
+                        help='IoT Hub Name')
+    parser.add_argument('--deviceId',
+                        type=str,
+                        nargs='?',
+                        default="MosquittoJohn",
+                        help='IoT Hub Device Id')
+    parser.add_argument('--mqttAzurePort',
+                        type=int,
+                        nargs='?',
+                        default=8883,
+                        help='MQTT Azure port')
+    parser.add_argument('--sas',
+                        type=str,
+                        nargs='?',
+                        help='sas token')
+    parser.add_argument('--certFile',
+                        type=str,
+                        nargs='?',
+                        default="Baltimore.pem",
+                        help='Root Cert File')
     parser.add_argument('--topic',
                         type=str,
                         nargs='?',
@@ -38,12 +62,14 @@ if __name__ == "__main__":
     args =  parser.parse_args()
 
     logging.basicConfig(format="%(asctime)s: %(levelname)s - %(message)s", level=args.loglevel)
-    
-    mqttc = mqttProducer(ID=args.id, mqttHost=args.mqttHost, mqttPort=args.mqttPort)
 
-    count=0
-    while True:
-        mqttc.send(args.topic, f"Message {count}")
-        count += 1
-        time.sleep(4)
+    mqttc = mqttConsumer(ID=args.id, mqttHost=args.mqttHost, mqttPort=args.mqttPort)
+    mqttc.run_subscribe(args.topic)
+
+    mqttr = mqttProducerSecured(iotHubName=args.iotHubName, deviceId=args.deviceId, sasToken=args.sas, mqttPort=args.mqttAzurePort, certFile=args.certFile)
+    mqttr.run_replicate(args.topic)
+
+    mqttc.getThread().join()
+    mqttr.getThread().join()
+    
     sys.exit(0)
