@@ -11,10 +11,6 @@
   become: yes
   roles:
   - role: runMQTT
-    vars:
-      IoTHubName: "{{IoTHubName}}"
-      deviceId:   "{{deviceId}}"
-      sas:        "{{ sas}}"
     tags: runMQTT
 
 - hosts: devices
@@ -23,6 +19,17 @@
   roles:
   - role: runCollectors
     vars:
+       IoTHubName: "{{IoTHubName}}"
+       connectionString: "{{connectionString}}"
        path: "{{ playbook_dir }}/../appCollector/"
     tags: runCollectors
 
+- hosts: mqttHost
+  become_user: root
+  become: yes
+  roles:
+  - role: IoTsync
+    vars:
+      IoTHubName: "{{IoTHubName}}"
+      connectionString: "{{connectionString}}"
+    tags: IoTsync

@@ -5,7 +5,7 @@
   docker_container:
     name: "{{ outer_item.item.name }}_{{ item | replace(':','_') }}"
     image: "collector:{{ image_tag }}"
-    command: "python3 collectData.py -d --device {{outer_item.item.name}} --interval {{outer_item.item.interval}} --mac {{item}} --mqttHost {{mqttHost}} --mqttPort {{mqttPort}} --topic {{topic}}"
+    command: "python3 collectData.py -d --device {{outer_item.item.device}} --deviceName {{outer_item.item.name}} --interval {{outer_item.item.interval}} --mac {{item}} --iot '{{IoTHubName}}' --connectionString '{{connectionString}}'"
     state: started
     recreate: yes
     privileged: yes

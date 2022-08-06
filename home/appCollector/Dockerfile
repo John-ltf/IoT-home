@@ -5,7 +5,7 @@ WORKDIR /app
 COPY requirements.txt /tmp/
 
 RUN apt-get update && \
-    apt-get install -y libglib2.0-dev bluetooth bluez && \
+    apt-get install -y libglib2.0-dev libssl-dev cmake bluetooth bluez && \
     apt-get clean && \
     pip3 install --requirement /tmp/requirements.txt
 

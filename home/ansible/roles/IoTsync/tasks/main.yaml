@@ -1,0 +1,13 @@
+- name: Include vars of vars.yaml
+  include_vars: vars.yaml
+
+- name: Start MQTT to Azure replicator
+  docker_container:
+    name: mqtt_to_azureIoT
+    image: "collector:{{ image_tag }}"
+    command: "python3 ./mqtt/mqttReplicator.py -d --id Replicator --mqttHost {{mqttHost}} --mqttPort {{mqttPort}} --iotHubName '{{IoTHubName}}' --mqttAzurePort 8883 --certFile ./mqtt/Balitore.pem --connectionString '{{connectionString}}'"
+    state: started
+    recreate: yes
+    privileged: yes
+    network_mode: host
+

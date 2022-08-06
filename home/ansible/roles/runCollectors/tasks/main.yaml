@@ -6,20 +6,6 @@
     msg: "Found app: {{ item.name }}"
   loop: "{{ collectors }}"
 
-#- name: Creates remote dockerfile directory
-#  file:
-#    path: /tmp/appDockerfiles/
-#    state: directory
-
-#- name: Copy Dockerfile and app files
-#  copy:
-#    src: "{{ path }}/"
-#    dest: /tmp/appDockerfiles/
-#    mode: preserve
-#    directory_mode: yes
-#  notify:
-#    - Build appCollector image
-
 - name: Copy Dockerfile and app files
   synchronize:
     src: "{{ path }}/"
@@ -33,12 +19,24 @@
   meta: flush_handlers
 
 - name: Find MAC addresses
-  script: "{{ path }}/scripts/get-mac-adress.sh {{ item.name }}" 
+  script: "{{ path }}/scripts/get-mac-adress.sh {{ item.device }}" 
   register: deviceResults
   loop: "{{ collectors }}"
 
-- include_tasks: run_device_containers.yaml
+- include_tasks: run_containers_to_mqtt.yaml
   loop: "{{ deviceResults.results }}"
   loop_control:
     loop_var: outer_item
+  when: telemetryToMqtt and not telemetryToIoTHub
 
+- include_tasks: run_containers_to_IoTHub.yaml
+  loop: "{{ deviceResults.results }}"
+  loop_control:
+    loop_var: outer_item
+  when: not telemetryToMqtt and telemetryToIoTHub
+  
+- include_tasks: run_containers_to_mqtt_IoTHub.yaml
+  loop: "{{ deviceResults.results }}"
+  loop_control:
+    loop_var: outer_item
+  when: telemetryToMqtt and telemetryToIoTHub

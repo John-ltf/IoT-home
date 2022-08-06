@@ -1,7 +1,10 @@
 collectors:
-  - { 'name': 'LYWSD03MMC', 'interval': 600 }
-  - { 'name': 'MIBFS', 'interval': 20 }
+  - { 'device': 'LYWSD03MMC', 'name': 'XiaomiTemperatureMijia',  'interval': 600 }
+  - { 'device': 'MIBFS', 'name': 'XiaomiScaleV2', 'interval': 20 }
 image_tag: '1.0'
 mqttHost: 127.0.0.1
 mqttPort: 1883
-topic: "telemetry"
+mqttAzurePort: 8883
+certFile: 'Balitore.pem'
+telemetryToMqtt: false
+telemetryToIoTHub: true

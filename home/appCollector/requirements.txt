@@ -1,2 +1,5 @@
 lywsd03mmc
 paho-mqtt
+azure-iot-hub
+msrest
+azure-iot-device

@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser.add_argument('-d', '--debug',
                         help="Print lots of debugging statements",
                         action="store_const", dest="loglevel", const=logging.DEBUG,
-                        default=logging.WARNING,
+                        default=logging.INFO,
     )
     parser.add_argument('-v', '--verbose',
                         help="Be verbose",

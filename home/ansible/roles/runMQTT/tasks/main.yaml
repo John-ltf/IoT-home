@@ -1,6 +1,3 @@
-- name: Include vars of vars.yaml
-  include_vars: vars.yaml
-
 - name: pull MQTT image
   docker_image:
     name: eclipse-mosquitto
@@ -12,14 +9,4 @@
     state: started
     published_ports: [ "1883:1883" ]
     volumes: [ "{{ playbook_dir }}/roles/runMQTT/files/mosquitto.conf:/mosquitto/config/mosquitto.conf" ]
-
-- name: Start MQTT to Azure replicator
-  docker_container:
-    name: mqtt_to_azureIoT
-    image: "collector:{{ image_tag }}"
-    command: "python3 ./mqtt/mqttReplicator.py -d --id Replicator --mqttHost {{mqttHost}} --mqttPort {{mqttPort}} --iotHubName '{{IoTHubName}}' --deviceId '{{deviceId}}' --mqttAzurePort 8883 --certFile ./mqtt/Balitore.pem --topic {{topic}} --sas '{{sas}}'"
-    state: started
-    recreate: yes
-    privileged: yes
-    network_mode: host
 

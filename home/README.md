@@ -26,16 +26,22 @@ ansible-playbook -i hosts.yaml run_apps.yaml
 ```
 
 You may need:
-1. Provide the Azure IoT Hub name using the variable `IoTHubName`
-2. Provide the device ID that is registered on Azure IoT Hub name using the variable `deviceId`
-3. Provide the SAS token that has been generated for the given device using the variable `sas`
-1. To skip the installation of docker by adding `-t runCollectors,runMQTT`
+1. To skip the installation of docker by adding `-t runCollectors,runMQTT,IoTsync`
 2. To ovveride the pre-configured python 2.x by adding `-e 'ansible_python_interpreter=/usr/bin/python3`
 3. To give as argument the root password by adding `--extra-vars "ansible_sudo_pass=<PASSWORD>"`
+4. To configure the Azure IoT Hub name by adding `IoTHubName='<IoTHubName>'`
+5. To configure the Azure IoT Hub connection string by adding `connectionString='<connectionString>'`
+
+
+You may also configure the collector devices in [conf](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/ansible/roles/runCollectors/vars/vars.yaml) file.
+1. The `telemetryToMqtt` setting enables the streaming of telemetry data from devices to local Mqtt broker
+2. The `telemetryToIoTHub` setting enables the streaming of telemetry data (directly) from devices to Azure IoT Hub
+3. The `collectors` array allows the definition of the sensor devices:
+	* device: the device type
+	* name: the device name. The value is used to create topic/Device on Mqtt/Azure IoT Hub
 
 The complete ansible command should look like:
-
-`ansible-playbook -i hosts.yaml run_apps.yaml -e 'ansible_python_interpreter=/usr/bin/python3' -t runCollectors,runMQTT --extra-vars "ansible_sudo_pass=<value> IoTHubName=<value> deviceId=<vale> sas='<value>'"`
+`ansible-playbook -i hosts.yaml run_apps.yaml -e 'ansible_python_interpreter=/usr/bin/python3' -t runCollectors,runMQTT,IoTsync --extra-vars "ansible_sudo_pass=<value> IoTHubName='<IoTHubName> connectionString='<connectionString>"`
 
 After the installation of playbook, the below will be up and running:
 1. A docker container collecting data from Xiaomi Mijia BLE Sensor and sending them to MQTT

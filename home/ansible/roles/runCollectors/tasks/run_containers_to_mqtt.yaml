@@ -1,0 +1,19 @@
+#Ansible do NOT support dynamic nested loops. I followed workound like:
+#https://docs.ansible.com/ansible/latest/user_guide/playbooks_loops.html#defining-inner-and-outer-variable-names-with-loop-var
+
+- name: Start Container
+  docker_container:
+    name: "{{ outer_item.item.name }}_{{ item | replace(':','_') }}"
+    image: "collector:{{ image_tag }}"
+    command: "python3 collectData.py -d --device {{outer_item.item.device}} --deviceName {{outer_item.item.name}} --interval {{outer_item.item.interval}} --mac {{item}} --mqttHost {{mqttHost}} --mqttPort {{mqttPort}}"
+    state: started
+    recreate: yes
+    privileged: yes
+    network_mode: host
+    volumes:
+      - /var/lock/bluetooth.lock:/var/lock/bluetooth.lock
+  loop: "{{ outer_item.stdout_lines }}"
+  when: 
+      - outer_item.stdout_lines != ""
+      - "{{ item | length }} > 0"
+

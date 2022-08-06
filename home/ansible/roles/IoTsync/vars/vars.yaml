@@ -1,4 +1,3 @@
 image_tag: '1.0'
 mqttHost: 127.0.0.1
 mqttPort: 1883
-topic: "telemetry"

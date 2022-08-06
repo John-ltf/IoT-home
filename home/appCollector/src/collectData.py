@@ -3,10 +3,13 @@ import logging
 import json
 import importlib
 import time
-from bluetoothExclusiveAccess import bluetoothExclusiveAccess
 from mqtt.mqttHandler import mqttProducer 
+import asyncio
+import sys
+sys.path.insert(2, './IoTsdk')
+from IoTsdk import IoTHub, IoTdevice
 
-def collect(interval: int, collectorClass: str, mac: str, mqttHost: str, mqttPort: int, mqttTopic: str):
+def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, mqttEnabled: bool, mqttHost: str, mqttPort: int, IoTHubEnabled: bool, iotHubName: str, connectionString: str):
     logging.info(f'Importing collectors.{collectorClass} module')
     collector_module = importlib.import_module(f'collectors.{collectorClass}')
 
@@ -14,20 +17,39 @@ def collect(interval: int, collectorClass: str, mac: str, mqttHost: str, mqttPor
     class_ = getattr(collector_module, collectorClass)
     instance = class_(mac)
 
-    logging.info('Connecting to MQTT')
-    mqttc = mqttProducer(ID=instance.getID(), mqttHost=mqttHost, mqttPort=mqttPort)
+    if mqttEnabled:
+        mqttTopic = deviceName
+        logging.info('Connecting to MQTT')
+        mqttc = mqttProducer(ID=instance.getID(), mqttHost=mqttHost, mqttPort=mqttPort)
 
-    exclusive = bluetoothExclusiveAccess(appId = instance.getID())
+    if IoTHubEnabled: 
+        logging.info('Connecting to IoT Hub')
+        iot = IoTHub(iotHubName = iotHubName, deviceName=deviceName, connectionString=connectionString)
+        logging.info('Register/Retrieve device')
+        iot.registerDevice()
+        logging.info('Connect to device')
+        device = IoTdevice(iot.getDeviceConnectionString(), instance)
+        asyncio.run(device.connect())
+
  
     while(True):
-        exclusive.acquire()
         logging.debug(f'Collecting Data')
         instance.collectData()
-        exclusive.release()
         if instance.dataCollected():
           logging.info(instance.getData())
-          mqttc.send(mqttTopic, instance.getData())
+          if mqttEnabled:
+              mqttc.send(mqttTopic, instance.getData())
 
+          if IoTHubEnabled:
+              asyncio.run(device.sendMessage(instance.getPureData()))
+              device.sendReportedProperties(instance.getPropertyData())
+        
+        #if Iot enabled, check for interval update
+        if IoTHubEnabled:
+            intervalPatch = device.getTwinPatchValue("interval")
+            if intervalPatch is not None and intervalPatch != interval:
+                logging.info(f"Setting interval to {interval}")
+                interval = intervalPatch
         time.sleep(interval)
 
 if __name__ == "__main__":
@@ -37,9 +59,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description='Data collector')
     parser.add_argument('-d', '--debug',
-                        help="Print lots of debugging statements",
+                        help="Print debugging statements",
                         action="store_const", dest="loglevel", const=logging.DEBUG,
-                        default=logging.WARNING,
+                        default=logging.INFO,
     )
     parser.add_argument('-v', '--verbose',
                         help="Be verbose",
@@ -49,6 +71,10 @@ if __name__ == "__main__":
                         type=str,
                         choices=list(DeviceClassMap.keys()),
                         help='Available Devices',
+                        required=True)
+    parser.add_argument('--deviceName',
+                        type=str,
+                        help='Your Device Name',
                         required=True)
     parser.add_argument('--mac', 
                         type=str,
@@ -62,24 +88,30 @@ if __name__ == "__main__":
     parser.add_argument('--mqttHost',
                         type=str,
                         nargs='?',
-                        default="127.0.0.1",
                         help='MQTT host')
     parser.add_argument('--mqttPort',
                         type=int,
-                        nargs='?',
                         default=1883,
+                        nargs='?',
                         help='MQTT port')
-    parser.add_argument('--topic',
+    parser.add_argument('--iot',
                         type=str,
                         nargs='?',
-                        default="telemetry",
-                        help='Topic Name')
+                        help='Azure IoT Hub Name (if telemetry is streamed directly tou cloud)')
+    parser.add_argument('--connectionString',
+                        type=str,
+                        nargs='?',
+                        help='Azure IoT Hub Connection String')
     args =  parser.parse_args()
     logging.basicConfig(format="%(asctime)s: %(levelname)s - %(message)s", level=args.loglevel)
     
     collect(args.interval,
-            DeviceClassMap[args.device], 
+            DeviceClassMap[args.device],
+            args.deviceName,
             args.mac,
+            (args.mqttHost is not None),
             args.mqttHost,
             args.mqttPort,
-            args.topic)
+            (args.iot is not None),
+            args.iot,
+            args.connectionString)

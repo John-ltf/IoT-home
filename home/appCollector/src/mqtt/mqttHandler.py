@@ -6,6 +6,11 @@ import sys
 import ssl
 import threading
 import queue
+import json
+
+sys.path.insert(1, '../')
+sys.path.insert(2, './IoTsdk')
+from IoTsdk import IoTHub
 
 def on_connect(mqttc, obj, flags, rc):
   if rc == 0:
@@ -16,8 +21,9 @@ def on_connect(mqttc, obj, flags, rc):
 def on_message(mqttc, obj, msg):
   logging.info(f'[{msg.topic}]:[{msg.qos}]:[{msg.payload.decode("utf-8")}]')
   if 'messages' in globals():
-      logging.debug(f"Add in Queue: {msg.payload.decode('utf-8')}")
-      messages.put(msg.payload.decode("utf-8"))
+      message = { 'topic': msg.topic, 'msg': msg.payload.decode('utf-8') }
+      logging.debug(f"Add in Queue: {message}")
+      messages.put(message)
 
 def on_publish(mqttc, obj, mid):
   logging.debug(f'Message publish with ID:{mid}')
@@ -85,7 +91,7 @@ class mqttConsumer(mqttClient):
       messages = queue.Queue()
       logging.debug("starting thread for consuming messages")
       try:
-          self.consumerThread = threading.Thread(target=self.subscribe, args=[topic])
+          self.consumerThread = threading.Thread(target=self.subscribe, args=[topic], daemon = True)
           self.consumerThread.start()
       except threading.Thread:
           cleanup_stop_thread()
@@ -97,18 +103,24 @@ class mqttConsumer(mqttClient):
 
 
 class mqttClientSecure():
-    def __init__(self, iotHubName: str, deviceId: str, sasToken: str,  mqttPort: int, certFile: str, keepalive: int = 60, qos: int = 1):
+    def __init__(self, iotHubName: str, deviceId: str, connectionString: str, mqttPort: int, certFile: str, keepalive: int = 60, qos: int = 1):
 
       self.iotHubName = iotHubName
       self.iotHostName = f"{self.iotHubName}.azure-devices.net"
       self.deviceId = deviceId
-      self.sasToken = sasToken
+      self.connectionString = connectionString
       self.username = f"{self.iotHubName}.azure-devices.net/{self.deviceId}/?api-version=2021-04-12"
       self.port = mqttPort
       self.certFile =  certFile
       self._keepalive = keepalive
       self._qos = qos
+      self.topic = f"devices/{self.deviceId}/messages/events/"
+      self._connect()
 
+    def _connect(self):
+      self.iot = IoTHub(iotHubName=self.iotHubName, deviceName=self.deviceId, connectionString=self.connectionString)
+      self.iot.registerDevice()
+      self.sasToken = self.iot.generateSaSToken()
       self._mqttc = mqtt.Client(client_id=self.deviceId, protocol=mqtt.MQTTv311)
       self._mqttc.on_message = on_message
       self._mqttc.on_connect = on_connect
@@ -119,30 +131,58 @@ class mqttClientSecure():
       self._mqttc.tls_insecure_set(False)
       self._mqttc.connect(self.iotHostName, port=self.port)
 
+    def _disconnect(self):
+        self._mqttc.disconnect() 
+        self._mqttc.loop_stop() 
 
 class mqttProducerSecured(mqttClientSecure):
-    def __init__(self, iotHubName: str, deviceId: str, sasToken: str, mqttPort: int, certFile: str, keepalive: int = 60, qos: int = 1):
-      mqttClientSecure.__init__(self, iotHubName, deviceId, sasToken, mqttPort, certFile, keepalive, qos)
-      self._mqttc.loop_start()
+    def __init__(self, iotHubName: str, deviceId: str, connectionString: str,  mqttPort: int, certFile: str, keepalive: int = 60, qos: int = 1):
+      mqttClientSecure.__init__(self, iotHubName, deviceId, connectionString, mqttPort, certFile, keepalive, qos)
+      self._startProducer()
 
-    def replicate(self, topic: str):
-      topic = f"devices/{self.deviceId}/messages/events/"
-      while True:
-        message = messages.get()
-        logging.debug(f"Replicating {message}")
-        #message.task_done()
-        self.send(topic, message)
+    def _startProducer(self):
+        self._mqttc.loop_start()
+    
+    def send(self, msg: str, firstTry = True):
+        try:
+            infot = self._mqttc.publish(self.topic, msg, self._qos)
+            infot.wait_for_publish()
+        except:
+            if firstTry:
+                logging.debug("Renewing SaS token and reconnectingt to IoT Hub")
+                self._disconnect()
+                self._connect()
+                self._startProducer()
+                self.send(msg, False)
+            else:
+                logging.error("Cannot send message to IoT Hub")
+                raise Exception("Cannot send message to IoT Hub")
 
-    def send(self, topic: str, msg: str):
-       infot = self._mqttc.publish(topic, msg, self._qos)
-       infot.wait_for_publish()
-#       self._mqttc.publish(topic, msg, self._qos)
-#       self._mqttc.loop_forever()
 
-    def run_replicate(self, topic: str):
+
+class mqttReplicator:
+    def __init__(self, iotHubName: str, mqttPort: int, certFile: str, connectionString: str):
+        self.iotHubName = iotHubName
+        self.mqttPort = mqttPort
+        self.certFile = certFile
+        self.connectionString = connectionString
+        self.producers = {}
+
+    def replicate(self):
+        while True:
+            element = messages.get()
+            topic = element['topic']
+            message = element['msg']
+            logging.debug(f"Replicating {message} on device {topic}")
+            if topic not in self.producers:
+                self.producers[topic] = mqttProducerSecured(iotHubName=self.iotHubName, deviceId=topic, connectionString=self.connectionString, mqttPort=self.mqttPort, certFile=self.certFile)
+            instance = self.producers[topic]
+            instance.send(message)
+
+    def run_replicate(self):
        logging.debug("starting thread for replicating messages")
        try:
-           self.replicateThread = threading.Thread(target=self.replicate, args=[topic])
+           self.replicateThread = threading.Thread(target=self.replicate, args=[], daemon = True)
            self.replicateThread.start()
        except threading.Thread:
            cleanup_stop_thread()
@@ -150,4 +190,6 @@ class mqttProducerSecured(mqttClientSecure):
 
     def getThread(self):
       return self.replicateThread
+
+
 
