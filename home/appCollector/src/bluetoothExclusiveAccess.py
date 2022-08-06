@@ -26,7 +26,7 @@ class bluetoothExclusiveAccess:
             logging.debug(f"Exclusive Lock {self.appId}")
             self.__writeContent(self.appId)
         except OSError as e:
-            logging.error(f"Could not lock file: {e.errno} {e.strerror}", file=sys.stderr)
+            logging.error(f"Could not lock file: {e.errno} {e.strerror}")
 
     def release(self):
         logging.debug(f"Release Lock {self.appId}")

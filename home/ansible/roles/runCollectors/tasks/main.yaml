@@ -1,6 +1,13 @@
 - name: Include vars of vars.yaml
   include_vars: vars.yaml
 
+- name: Create a 
+  ansible.builtin.file:
+    path: /var/lock/bluetooth.lock
+    owner: foo
+    group: foo
+    mode: '0755'
+
 - name: Print collector List
   debug:
     msg: "Found app: {{ item.name }}"
