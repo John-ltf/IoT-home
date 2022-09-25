@@ -20,6 +20,7 @@
   - role: runCollectors
     vars:
        IoTHubName: "{{IoTHubName}}"
+       userId: "{{userId}}"
        connectionString: "{{connectionString}}"
        path: "{{ playbook_dir }}/../appCollector/"
     tags: runCollectors

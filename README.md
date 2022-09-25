@@ -39,6 +39,7 @@ You may need:
 3. To give as argument the root password by adding `--extra-vars "ansible_sudo_pass=<PASSWORD>"`
 4. To configure the Azure IoT Hub name by adding `IoTHubName='<IoTHubName>'`
 5. To configure the Azure IoT Hub connection string by adding `connectionString='<connectionString>'`
+6. To set your user Id/Name of the Azure Active Directory by adding userId='<AD user>'. This is needed to handle the IoT devices from the the IoT App.
 
 
 You may also configure the collector devices in [conf](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/ansible/roles/runCollectors/vars/vars.yaml) file.
@@ -49,7 +50,7 @@ You may also configure the collector devices in [conf](https://github.com/John-l
 	* name: the device name. The value is used to create topic/Device on Mqtt/Azure IoT Hub
 
 The complete ansible command should look like:
-`ansible-playbook -i hosts.yaml run_apps.yaml -e 'ansible_python_interpreter=/usr/bin/python3' -t runCollectors,runMQTT,IoTsync --extra-vars "ansible_sudo_pass=<value> IoTHubName='<IoTHubName> connectionString='<connectionString>"`
+`ansible-playbook -i hosts.yaml run_apps.yaml -e 'ansible_python_interpreter=/usr/bin/python3' -t runCollectors,runMQTT,IoTsync --extra-vars "ansible_sudo_pass=<value> userId=<AD userId> IoTHubName='<IoTHubName> connectionString='<connectionString>"`
 
 After the installation of playbook, the below will be up and running:
 1. A docker container collecting data from Xiaomi Mijia BLE Sensor and sending them to MQTT

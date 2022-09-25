@@ -39,6 +39,11 @@ if __name__ == "__main__":
                         nargs='?',
                         help='Device Name',
                         required=True)
+    parser.add_argument('--mac',
+                        type=str,
+                        nargs='?',
+                        help='Device MAC address',
+                        required=True)
     parser.add_argument('--connectionString', 
                         type=str,
                         nargs='?',
@@ -48,7 +53,7 @@ if __name__ == "__main__":
 
     logging.basicConfig(format="%(asctime)s: %(levelname)s - %(message)s", level=args.loglevel)
     
-    iot = IoTHub(iotHubName = args.iot, deviceName=args.device, connectionString=args.connectionString)
+    iot = IoTHub(iotHubName = args.iot, deviceName=args.device, deviceMac=args.mac, connectionString=args.connectionString)
     iot.registerDevice()
 
     #sas = iot.generateSaSToken()

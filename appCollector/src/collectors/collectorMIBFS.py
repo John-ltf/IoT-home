@@ -25,6 +25,7 @@ class collectorMIBFS_delegator(DefaultDelegate):
         self._collectSuccess = False
         self.lastPublish = ""
         self.metricsStatus = measurementStatus.NO_STATUS
+        self.ttl = -1
 
     def getMeasurementStatus(self):
         return self.metricsStatus
@@ -88,14 +89,15 @@ class collectorMIBFS_delegator(DefaultDelegate):
   
     def getData(self) -> str:
         data = {
-                "device": "MIBFS",
+                "DeviceType": "MIBFS",
                 "MAC": self._mac,
                 "time": datetime.utcnow().strftime("%Y-%m-%d:%H:%M:%S"),
                 "impedance" : str(self._publishData['impedance']),
                 "unitCode" : str(self._publishData['unitCode']),
                 "weight" : str(self._publishData['weight']),
                 "impedanceValue" : str(self._publishData['impedanceValue']),
-                "unit" : str(self._publishData['unit'])
+                "unit" : str(self._publishData['unit']),
+                "ttl": str(self.ttl)
                 }
         return json.dumps(data)
 
@@ -104,12 +106,16 @@ class collectorMIBFS_delegator(DefaultDelegate):
                 "time": datetime.utcnow().strftime("%Y-%m-%d:%H:%M:%S"),
                 "weight" : str(self._publishData['weight']),
                 "impedanceValue" : str(self._publishData['impedanceValue']),
+                "ttl": str(self.ttl)
                 }
         return json.dumps(data)
 
+    def set_ttl(self, ttl : str):
+        self.ttl = ttl;
+
     def getPropertyData(self) -> List[Dict]:
         data = list()
-        data.append({ "device": "MIBFS" })
+        data.append({ "DeviceType": "MIBFS" })
         data.append({ "MAC": self._mac })
         data.append({ "impedance" : str(self._publishData['impedance']) })
         data.append({ "unitCode" : str(self._publishData['unitCode']) })
@@ -130,6 +136,7 @@ class collectorMIBFS(collectorI):
         self.collectorObject = collectorMIBFS_delegator(self._mac)
         self.lastPropertyData = ""
         self.exclusive = bluetoothExclusiveAccess(appId = self.getID())
+        self.ttl = -1
 
     def dataCollected(self):
         return self._collectSuccess
@@ -185,6 +192,10 @@ class collectorMIBFS(collectorI):
         if self.dataCollected():
             return self.collectorObject.getPureData()
         return json.dumps(data)
+
+    def setRetentionPolicy(self, ttl : str):
+        self.ttl = ttl;
+        self.collectorObject.set_ttl(self.ttl)
 
     def getPropertyData(self) -> List[Dict]:
         if self.dataCollected():

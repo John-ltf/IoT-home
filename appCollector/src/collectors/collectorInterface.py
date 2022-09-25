@@ -17,6 +17,8 @@ class collectorI:
     @abstractmethod
     def getPureData(self) -> str: raise NotImplementedError
     @abstractmethod
+    def setRetentionPolicy(self) -> str: raise NotImplementedError
+    @abstractmethod
     def getPropertyData(self) -> List[Dict]: raise NotImplementedError
     @abstractmethod
     def handleDesiredProperties(self, twinPatch: Dict): raise NotImplementedError

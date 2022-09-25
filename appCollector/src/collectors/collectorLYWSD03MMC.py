@@ -17,6 +17,7 @@ class collectorLYWSD03MMC(collectorI):
         self._id = f"LYWSD03MMC_{mac.replace(':','_')}"
         self.lastPropertyData = ""
         self.exclusive = bluetoothExclusiveAccess(appId = self.getID())
+        self.ttl = -1
 
     def dataCollected(self):
         return self._collectSuccess
@@ -76,13 +77,14 @@ class collectorLYWSD03MMC(collectorI):
   
     def getData(self) -> str:
         data = {
-                "device": "LYWSD03MMC",
+                "DeviceType": "LYWSD03MMC",
                 "MAC": self._mac,
                 "time": datetime.utcnow().strftime("%Y-%m-%d:%H:%M:%S"),
                 "temperature" : str(self._data['temperature']),
                 "humidity" : str(self._data['humidity']),
                 "battery" : str(self._data['battery']),
-                "units" : str(self._data['units'])
+                "units" : str(self._data['units']),
+                "ttl" : str(self.ttl)
                 }
         return json.dumps(data)
 
@@ -90,13 +92,17 @@ class collectorLYWSD03MMC(collectorI):
         data = {
                 "time": datetime.utcnow().strftime("%Y-%m-%d:%H:%M:%S"),
                 "temperature" : str(self._data['temperature']),
-                "humidity" : str(self._data['humidity'])
+                "humidity" : str(self._data['humidity']),
+                "ttl" : str(self.ttl)
                 }
         return json.dumps(data)
 
+    def set_ttl(self, ttl : str):
+        self.ttl = ttl;
+
     def getPropertyData(self) -> List[Dict]:
         data = list()
-        data.append({ "device": "LYWSD03MMC" })
+        data.append({ "DeviceType": "LYWSD03MMC" })
         data.append({ "MAC": self._mac })
         data.append({ "battery" : str(self._data['battery']) })
         data.append({ "units" : str(self._data['units']) })

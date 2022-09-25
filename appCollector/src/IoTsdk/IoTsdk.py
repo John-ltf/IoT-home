@@ -11,15 +11,24 @@ import os
 import asyncio
 from azure.iot.device.aio import IoTHubDeviceClient
 from azure.iot.device import MethodResponse
+from azure.iot.hub.models import Twin, TwinProperties
 from typing import List, Dict
 
 class IoTHub:
-    def __init__(self, iotHubName: str, connectionString: str, deviceName: str):
+    def __init__(self, iotHubName: str, connectionString: str, deviceName: str, tags: dict = {}, props: dict = {}, deviceMac: str = ""):
         self.iotHubName = iotHubName
         self.connectionString = connectionString
         self.deviceName = deviceName
+        self.tags= tags
+        self.props = props
+        self.deviceMac = deviceMac
+
+        self.deviceId = self.deviceName
+        if self.deviceMac != "":
+            self.deviceId = f"{self.deviceName}_{self.deviceMac}"
+        
         self.sharedKey = self._getSharedKey()
-        self.uri = f"{self.iotHubName}.azure-devices.net/devices/{self.deviceName}"
+        self.uri = f"{self.iotHubName}.azure-devices.net/devices/{self.deviceId}"
 
     def registerDevice(self):
         try:
@@ -28,24 +37,38 @@ class IoTHub:
 
             try:
                 # CreateDevice - let IoT Hub assign keys
-                logging.info(f"Registering device {self.deviceName}")
-                self.device = iothub_registry_manager.create_device_with_sas(self.deviceName, "", "", "enabled")
+                logging.info(f"Registering device {self.deviceId}")
+                self.device = iothub_registry_manager.create_device_with_sas(self.deviceId, "", "", "enabled")
+
+                #add tags and desired properties
+                logging.info(f"Applying tags {self.tags}")
+                twin = iothub_registry_manager.get_twin(self.deviceId)
+                twinPatch = Twin(tags=self.tags)
+                twin = iothub_registry_manager.update_twin(self.deviceId, twinPatch, twin.etag)
+                for prop in self.props:
+                    logging.info(f"Applying desired property {prop}")
+                    twin = iothub_registry_manager.get_twin(self.deviceId)
+                    twinPatch = Twin( properties= TwinProperties(desired=prop))
+                    twin = iothub_registry_manager.update_twin(self.deviceId, twinPatch, twin.etag)
+                return True
+
             except HttpOperationError as ex:
                 if ex.response.status_code == 409:
                     # 409 indicates a conflict. This happens because the device already exists.
-                    logging.info:(f"Device {self.deviceName} allready registered")
-                    self.device = iothub_registry_manager.get_device(self.deviceName)
+                    logging.info:(f"Device {self.deviceId} allready registered")
+                    self.device = iothub_registry_manager.get_device(self.deviceId)
                 else:
-                    logging.error(f"Cannot create device {self.deviceName}")
-                    raise Exception(f"Cannot create device {self.deviceName}")
+                    logging.error(f"Cannot create device {self.deviceId}")
+                    raise Exception(f"Cannot create device {self.deviceId}")
         except Exception as ex:
             print("Unexpected error {0}".format(ex))
         except KeyboardInterrupt:
             print("IoTHubRegistryManager sample stopped")
+        return False
 
 
     def getDeviceConnectionString(self):
-        return f"HostName={self.iotHubName}.azure-devices.net;DeviceId={self.deviceName};SharedAccessKey={self.device.authentication.symmetric_key.primary_key}"
+        return f"HostName={self.iotHubName}.azure-devices.net;DeviceId={self.deviceId};SharedAccessKey={self.device.authentication.symmetric_key.primary_key}"
 
     def _getSharedKey(self):
         tokens = self.connectionString.split(";")
@@ -132,6 +155,23 @@ class IoTdevice:
             return self._desiredProperties[key] 
         return None
 
+    def getInterval(self):
+        intervalPatch = self.getTwinPatchValue("Interval")
+        if intervalPatch:
+            try:
+                interval = int(intervalPatch)
+                if interval is not None:
+                    return interval
+            except ValueError:
+                logging.error('interval is not an integer')
+        return -1
+
+    def getRetentionPolicyData(self):
+        retentionPolicyDataPatch = self.getTwinPatchValue("RetentionPolicyData")
+        if retentionPolicyDataPatch:
+            return retentionPolicyDataPatch
+        return -1
+
     def sendReportedProperties(self, reportedProperties: List[Dict]):
         for reportedProperty in reportedProperties:
             asyncio.run(self.sendReportedProperty(reportedProperty))
@@ -142,7 +182,7 @@ class IoTdevice:
         except KeyboardInterrupt:
             logging.error("IoT Hub Device Twin device sample stopped")
         finally:
-            logging.error("Shutting down IoT Hub Client")
+            logging.debug("Shutting down IoT Hub Client")
             self.disconnect
 
 

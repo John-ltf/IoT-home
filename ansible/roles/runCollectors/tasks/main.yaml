@@ -1,11 +1,12 @@
 - name: Include vars of vars.yaml
   include_vars: vars.yaml
 
-- name: Create a 
+- name: Create a lock file used by containers for exclusive lock 
   ansible.builtin.file:
     path: /var/lock/bluetooth.lock
-    owner: foo
-    group: foo
+    state: touch
+    owner: root
+    group: root
     mode: '0755'
 
 - name: Print collector List

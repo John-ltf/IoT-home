@@ -9,7 +9,7 @@ import sys
 sys.path.insert(2, './IoTsdk')
 from IoTsdk import IoTHub, IoTdevice
 
-def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, mqttEnabled: bool, mqttHost: str, mqttPort: int, IoTHubEnabled: bool, iotHubName: str, connectionString: str):
+def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, userId: str, mqttEnabled: bool, mqttHost: str, mqttPort: int, IoTHubEnabled: bool, iotHubName: str, connectionString: str):
     logging.info(f'Importing collectors.{collectorClass} module')
     collector_module = importlib.import_module(f'collectors.{collectorClass}')
 
@@ -23,14 +23,19 @@ def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, mqtt
         mqttc = mqttProducer(ID=instance.getID(), mqttHost=mqttHost, mqttPort=mqttPort)
 
     if IoTHubEnabled: 
+        props = [{"TelemetryData": "True"}, {"Controller": "False"}]
+        tags = {"User": userId, "NickName": ""}
         logging.info('Connecting to IoT Hub')
-        iot = IoTHub(iotHubName = iotHubName, deviceName=deviceName, connectionString=connectionString)
+        iot = IoTHub(iotHubName = iotHubName, deviceName=deviceName, deviceMac=mac, tags=tags, props=props, connectionString=connectionString)
         logging.info('Register/Retrieve device')
-        iot.registerDevice()
+        registered = iot.registerDevice()
         logging.info('Connect to device')
         device = IoTdevice(iot.getDeviceConnectionString(), instance)
         asyncio.run(device.connect())
 
+        if registered:
+            logging.info('Setting initial properties')
+            device.sendReportedProperties([{ "AutoRegistered": "True"}])
  
     while(True):
         logging.debug(f'Collecting Data')
@@ -41,15 +46,16 @@ def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, mqtt
               mqttc.send(mqttTopic, instance.getData())
 
           if IoTHubEnabled:
+              instance.set_ttl(device.getRetentionPolicyData())
               asyncio.run(device.sendMessage(instance.getPureData()))
               device.sendReportedProperties(instance.getPropertyData())
         
         #if Iot enabled, check for interval update
         if IoTHubEnabled:
-            intervalPatch = device.getTwinPatchValue("interval")
-            if intervalPatch is not None and intervalPatch != interval:
-                logging.info(f"Setting interval to {interval}")
+            intervalPatch = device.getInterval()
+            if intervalPatch != -1 and intervalPatch != interval:
                 interval = intervalPatch
+        
         time.sleep(interval)
 
 if __name__ == "__main__":
@@ -80,6 +86,10 @@ if __name__ == "__main__":
                         type=str,
                         help='Mac Address of Device',
                         required=True)
+    parser.add_argument('--userId',
+                        type=str,
+                        help='The user Name/Id (Azure AD) ',
+                        required=False)
     parser.add_argument('--interval', 
                         type=int,
                         nargs='?',
@@ -109,6 +119,7 @@ if __name__ == "__main__":
             DeviceClassMap[args.device],
             args.deviceName,
             args.mac,
+            args.userId,
             (args.mqttHost is not None),
             args.mqttHost,
             args.mqttPort,
