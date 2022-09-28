@@ -13,7 +13,7 @@ timeout = 30
 class collectorLYWSD03MMC(collectorI):
     def __init__(self, mac: str):
         self._mac = mac
-        self._data = { "temperature": "", "humidity": "", "battery": "", "units": "" }
+        self._data = { "temperature": "", "humidity": "", "battery": "", "unit_temperature": "" }
         self._id = f"LYWSD03MMC_{mac.replace(':','_')}"
         self.lastPropertyData = ""
         self.exclusive = bluetoothExclusiveAccess(appId = self.getID())
@@ -36,7 +36,7 @@ class collectorLYWSD03MMC(collectorI):
             else:
                 if "Temperature" in line:
                     self._data['temperature'] = line.split(":")[1][0:-2]
-                    self._data['units'] = line.split(":")[1][-1:]
+                    self._data['unit_temperature'] = line.split(":")[1][-1:]
                     count += 1
                 elif "Humidity" in line:
                     self._data['humidity'] = line.split(":")[1][0:-1]
@@ -83,7 +83,8 @@ class collectorLYWSD03MMC(collectorI):
                 "temperature" : str(self._data['temperature']),
                 "humidity" : str(self._data['humidity']),
                 "battery" : str(self._data['battery']),
-                "units" : str(self._data['units']),
+                "unit_temperature" : str(self._data['unit_temperature']),
+                "unit_humidity" : "percentage",
                 "ttl" : str(self.ttl)
                 }
         return json.dumps(data)
@@ -97,7 +98,7 @@ class collectorLYWSD03MMC(collectorI):
                 }
         return json.dumps(data)
 
-    def set_ttl(self, ttl : str):
+    def setRetentionPolicy(self, ttl : str):
         self.ttl = ttl;
 
     def getPropertyData(self) -> List[Dict]:
@@ -105,7 +106,8 @@ class collectorLYWSD03MMC(collectorI):
         data.append({ "DeviceType": "LYWSD03MMC" })
         data.append({ "MAC": self._mac })
         data.append({ "battery" : str(self._data['battery']) })
-        data.append({ "units" : str(self._data['units']) })
+        data.append({ "unit_temperature" : str(self._data['unit_temperature']) })
+        data.append({ "unit_humidity" : "percentage" })
 
         newPropertyData = ','.join(json.dumps(d) for d in data)
         if newPropertyData != self.lastPropertyData:

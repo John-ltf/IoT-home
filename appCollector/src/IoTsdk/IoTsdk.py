@@ -155,6 +155,9 @@ class IoTdevice:
             return self._desiredProperties[key] 
         return None
 
+    def getTwinPatch(self):
+        return dict(self._desiredProperties)
+
     def getInterval(self):
         intervalPatch = self.getTwinPatchValue("Interval")
         if intervalPatch:

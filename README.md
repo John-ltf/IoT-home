@@ -80,3 +80,10 @@ You can select your implementation running the python app and using the `--devic
 
 To include the new implementation in the Ansible playbook you can add your implementation (class name) in the [config file](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/ansible/roles/runCollectors/vars/vars.yaml)
 
+## Github Repos are used for this solution
+
+[lywsd03mmc](https://github.com/uduncanu/lywsd03mmc)
+[Paho MQTT](https://github.com/eclipse/paho.mqtt.python)
+[msrest](https://pypi.org/project/msrest/)
+[xiaomi_mi_scale](https://github.com/lolouk44/xiaomi_mi_scale)
+[azure-iot-sdk-python](https://github.com/Azure/azure-iot-sdk-python)

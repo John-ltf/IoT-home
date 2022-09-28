@@ -46,7 +46,8 @@ def collect(interval: int, collectorClass: str, deviceName: str,  mac: str, user
               mqttc.send(mqttTopic, instance.getData())
 
           if IoTHubEnabled:
-              instance.set_ttl(device.getRetentionPolicyData())
+              instance.setRetentionPolicy(device.getRetentionPolicyData())
+              instance.handleDesiredProperties(device.getTwinPatch())
               asyncio.run(device.sendMessage(instance.getPureData()))
               device.sendReportedProperties(instance.getPropertyData())
         

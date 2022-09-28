@@ -1,7 +1,7 @@
 from .collectorInterface import collectorI
 from lywsd03mmc import Lywsd03mmcClient
 import json
-from datetime import datetime
+from datetime import datetime, date
 import logging
 import time
 from collections import defaultdict
@@ -9,6 +9,12 @@ from bluepy.btle import Scanner, Peripheral, DefaultDelegate, ADDR_TYPE_RANDOM, 
 from bluetoothExclusiveAccess import bluetoothExclusiveAccess
 from typing import List, Dict
 from enum import Enum
+
+import os
+import sys
+import xiaomi_mi_scale
+sys.path.insert(2, os.path.dirname(xiaomi_mi_scale.__file__))
+import body_metrics
 
 class measurementStatus(Enum):
     NO_STATUS = 1
@@ -20,7 +26,7 @@ class collectorMIBFS_delegator(DefaultDelegate):
     metricsStatusList = ["PUBLISH", "SKIP_PUBLISH", "NEW_MEASUREMENT"]
     def __init__(self, mac: str):
         self._mac = mac
-        self._data = { "impedance": "", "unitCode": "", "weight": "", "impedanceValue": "", "unit": "" }
+        self._data = { "impedance": "", "unitCode": "", "weight": "", "impedanceValue": "", "unit_weight": "" }
         self._publishData = self._data.copy()
         self._collectSuccess = False
         self.lastPublish = ""
@@ -51,19 +57,19 @@ class collectorMIBFS_delegator(DefaultDelegate):
 
         self._data['unitCode'] = data[2]
         if (self._data['unitCode'] & (1<<4)) != 0:
-            self._data['unit'] = "jin"
+            self._data['unit_weight'] = "jin"
         elif (self._data['unitCode'] & (1<<2)) != 0:
-            self._data['unit'] = "lbs"
+            self._data['unit_weight'] = "lbs"
         elif (self._data['unitCode'] & (1<<1)) != 0:
-            self._data['unit'] = "kg"
+            self._data['unit_weight'] = "kg"
         else:
-            self._data['unit'] = "unknown"
+            self._data['unit_weight'] = "unknown"
 
         self._data['weight'] = int.from_bytes(data[13:15], byteorder='little') / 100
-        if self._data['unit'] == "kg":
+        if self._data['unit_weight'] == "kg":
             self._data['weight'] /= 2
 
-        logging.info(f"{self._data['stabilized']} {self._data['impedance']} {self._data['unitCode']} {self._data['weight']} {self._data['impedanceValue']} {self._data['unit']}")
+        logging.info(f"{self._data['stabilized']} {self._data['impedance']} {self._data['unitCode']} {self._data['weight']} {self._data['impedanceValue']} {self._data['unit_weight']}")
         if (self._data['stabilized'] and self._data['impedance']):
             if self.lastPublish != f"{self._data['weight']}-{self._data['impedanceValue']}":
                 self.lastPublish = f"{self._data['weight']}-{self._data['impedanceValue']}"
@@ -87,7 +93,27 @@ class collectorMIBFS_delegator(DefaultDelegate):
             logging.error(f"Unsupported device/data {self.data[22]['data']}")
 
   
-    def getData(self) -> str:
+    def calcAge(self, userProfile):
+        today = date.today()
+        return today.year - userProfile["year"] - ((today.month, today.day) < (userProfile["month"], userProfile["day"]))
+	
+    def getDerivedValues(self, userProfile):
+        data = {}
+        if userProfile["ready"] == True:
+            bm = body_metrics.bodyMetrics(float(self._publishData['weight']), userProfile["height"], self.calcAge(userProfile), userProfile["gender"], int(self._publishData['impedanceValue']))
+            data["bodyFat"]			= bm.getFatPercentage()
+            data["water"]			= bm.getWaterPercentage()
+            data["protein"]			= bm.getProteinPercentage()
+            data["bodyAge"]			= bm.getMetabolicAge()
+            data["boneMass"]		        = bm.getBoneMass()
+            data["muscle"]			= bm.getMuscleMass()
+            data["visceralFat"]	        	= bm.getVisceralFat()
+            data["bmi"]				= bm.getBMI()
+            data["basalMetabolism"]	        = bm.getBMR()
+            data["leanBodyMass"]        	= bm.getLBMCoefficient()
+        return data
+	
+    def getData(self, userProfile) -> str:
         data = {
                 "DeviceType": "MIBFS",
                 "MAC": self._mac,
@@ -96,18 +122,32 @@ class collectorMIBFS_delegator(DefaultDelegate):
                 "unitCode" : str(self._publishData['unitCode']),
                 "weight" : str(self._publishData['weight']),
                 "impedanceValue" : str(self._publishData['impedanceValue']),
-                "unit" : str(self._publishData['unit']),
+                "unit_weight" : str(self._publishData['unit_weight']),
                 "ttl": str(self.ttl)
                 }
+        if self._publishData['impedance']:
+            data.update(self.getDerivedValues(userProfile))
+            data["unit_bodyFat"]		= "percentage"
+            data["unit_water"]			="percentage"
+            data["unit_protein"]		="percentage"
+            data["unit_bodyAge"]		="years"
+            data["unit_boneMass"]		="kg"
+            data["unit_muscle"]			="kg"
+            data["unit_visceralFat"]    	="unknown"
+            data["unit_bmi"]			="bmi"
+            data["unit_basalMetabolism"]        ="kcal"
+            data["leanBodyMass"]		="kg"
         return json.dumps(data)
 
-    def getPureData(self) -> str:
+    def getPureData(self, userProfile) -> str:
         data = {
                 "time": datetime.utcnow().strftime("%Y-%m-%d:%H:%M:%S"),
                 "weight" : str(self._publishData['weight']),
                 "impedanceValue" : str(self._publishData['impedanceValue']),
                 "ttl": str(self.ttl)
                 }
+        if self._publishData['impedance']:
+            data.update(self.getDerivedValues(userProfile))
         return json.dumps(data)
 
     def set_ttl(self, ttl : str):
@@ -119,7 +159,18 @@ class collectorMIBFS_delegator(DefaultDelegate):
         data.append({ "MAC": self._mac })
         data.append({ "impedance" : str(self._publishData['impedance']) })
         data.append({ "unitCode" : str(self._publishData['unitCode']) })
-        data.append({ "unit" : str(self._publishData['unit']) })
+        data.append({ "unit_weight" : str(self._publishData['unit_weight']) })
+        if self._publishData['impedance']:
+            data.append({ "unit_bodyFat" : "percentage" })
+            data.append({ "unit_water" : "percentage" })
+            data.append({ "unit_protein" : "percentage" })
+            data.append({ "unit_bodyAge" : "years" })
+            data.append({ "unit_boneMass" : "kg" })
+            data.append({ "unit_muscle" : "kg" })
+            data.append({ "unit_visceralFat" : "unknown" })
+            data.append({ "unit_bmi" : "bmi" })
+            data.append({ "unit_basalMetabolism" : "kcal" })
+            data.append({ "leanBodyMass" : "kg" })
         return data
 
     def dataCollected(self):
@@ -137,6 +188,7 @@ class collectorMIBFS(collectorI):
         self.lastPropertyData = ""
         self.exclusive = bluetoothExclusiveAccess(appId = self.getID())
         self.ttl = -1
+        self.userProfile = { "gender": "", "height": "", "year": "", "month": "", "day" : "", "ready" : False }
 
     def dataCollected(self):
         return self._collectSuccess
@@ -186,17 +238,17 @@ class collectorMIBFS(collectorI):
 
     def getData(self) -> str:
         if self.dataCollected():
-            return self.collectorObject.getData()
+            return self.collectorObject.getData(self.userProfile)
 
     def getPureData(self) -> str:
         if self.dataCollected():
-            return self.collectorObject.getPureData()
+            return self.collectorObject.getPureData(self.userProfile)
         return json.dumps(data)
 
     def setRetentionPolicy(self, ttl : str):
         self.ttl = ttl;
         self.collectorObject.set_ttl(self.ttl)
-
+		
     def getPropertyData(self) -> List[Dict]:
         if self.dataCollected():
             data = self.collectorObject.getPropertyData()
@@ -208,4 +260,33 @@ class collectorMIBFS(collectorI):
         return list()
 
     def handleDesiredProperties(self, twinPatch: Dict):
-        pass
+        props = 0
+        if "Gender" in twinPatch:
+            self.userProfile["gender"] = twinPatch["Gender"]
+            props +=1
+        if "Height" in twinPatch:
+            try:
+                self.userProfile["height"] = int(twinPatch["Height"])
+                props +=1
+            except ValueError:
+                logging.error('height is not an integer')
+        if "Year" in twinPatch:
+            try:
+                self.userProfile["year"] = int(twinPatch["Year"])
+                props +=1
+            except ValueError:
+                logging.error('year is not an integer')
+        if "Month" in twinPatch:
+            try:
+                self.userProfile["month"] = int(twinPatch["Month"])
+                props +=1
+            except ValueError:
+                 logging.error('month is not an integer')
+        if "Day" in twinPatch:
+            try:
+                self.userProfile["day"] = int(twinPatch["Day"])
+                props +=1
+            except ValueError:
+                 logging.error('month is not an integer')
+        if props == 5:
+            self.userProfile["ready"] = True
