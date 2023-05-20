@@ -17,7 +17,7 @@ The directory includes
 Python3 and Ansible should be pre-installed to deploy the collector/controller applications and an MQTT on the home side.
 
 ```
-apt install python3.11, ansible
+apt install python3.8, ansible
 ```
 
 The below Ansible galaxy collection will be also needed.
