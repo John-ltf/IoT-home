@@ -19,6 +19,14 @@ Python3 and Ansible should be pre-installed to deploy the collector/controller a
 ```
 apt install python3.8, ansible
 ```
+> **_NOTE:_** Ansible 2.9 or higher is required
+> In case that default repo include ansible version less than 2.9, than follow the below instructions.
+> ```
+> sudo apt install software-properties-common
+> sudo apt-add-repository ppa:ansible/ansible
+> sudo apt update
+> sudo apt install ansible
+> ```
 
 The below Ansible galaxy collection will be also needed.
 
@@ -32,6 +40,8 @@ To install the applications, run:
 ```
 ansible-playbook -i hosts.yaml run_apps.yaml
 ```
+
+> NOTE: You may want to use `ssh-keygen` and `ssh-copy-id` for passwordless run
 
 You may need:
 1. To skip the installation of docker by adding `-t runCollectors,runMQTT,IoTsync`
