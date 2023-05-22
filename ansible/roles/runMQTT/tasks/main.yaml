@@ -2,6 +2,11 @@
   docker_image:
     name: eclipse-mosquitto
 
+- name: Creates directory
+  file:
+    path: /var/lib/mosquitto-container
+    state: directory
+    
 - name: Start Container MQTT
   docker_container:
     name: mosquitto 
@@ -9,5 +14,7 @@
     state: started
     restart_policy: always
     published_ports: [ "1883:1883" ]
-    volumes: [ "{{ playbook_dir }}/roles/runMQTT/files/mosquitto.conf:/mosquitto/config/mosquitto.conf" ]
+    volumes: 
+      -"{{ playbook_dir }}/roles/runMQTT/files/mosquitto.conf:/mosquitto/config/mosquitto.conf"
+      -"/var/lib/mosquitto-container:/var/lib/mosquitto"
 
