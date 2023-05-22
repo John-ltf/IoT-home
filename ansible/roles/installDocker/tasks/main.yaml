@@ -15,6 +15,7 @@
       - virtualenv
       - python3-setuptools
       - containerd.io
+      - libc6
     state: latest
     update_cache: true
 
