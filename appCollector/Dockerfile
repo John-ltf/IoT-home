@@ -1,5 +1,4 @@
-#FROM python:3.8
-FROM arm32v7/python:3.9-slim-buster
+FROM python:3.8
 
 WORKDIR /app
 
