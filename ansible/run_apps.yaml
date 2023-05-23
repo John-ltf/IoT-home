@@ -22,6 +22,8 @@
        IoTHubName: "{{IoTHubName}}"
        userId: "{{userId}}"
        connectionString: "{{connectionString}}"
+       docker_user: "{{docker_user}}"
+       docker_password: "{{docker_password}}"
        path: "{{ playbook_dir }}/../appCollector/"
     tags: runCollectors
 
