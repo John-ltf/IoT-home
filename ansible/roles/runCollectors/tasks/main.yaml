@@ -14,14 +14,26 @@
     msg: "Found app: {{ item.name }}"
   loop: "{{ collectors }}"
 
-- name: Copy Dockerfile and app files
-  synchronize:
-    src: "{{ path }}/"
-    dest: /tmp/appDockerfiles
-    delete: yes
-    recursive: yes
-  notify:
-    - Build appCollector image
+# This is old method to build locally the dockerfile
+# - name: Copy Dockerfile and app files
+#   synchronize:
+#     src: "{{ path }}/"
+#     dest: /tmp/appDockerfiles
+#     delete: yes
+#     recursive: yes
+#   notify:
+#     - Build appCollector image
+
+- name: Log in to Docker registry
+  docker_login:
+    username: "{{ docker_user }}"
+    password: "{{ docker_password }}"
+    registry_url: ghcr.io
+
+- name: Pull Docker image
+  docker_image:
+    name: "ghcr.io/john-ltf/collector:{{ image_tag }}"
+    source: pull
 
 - name: Force all notified handlers to run at this point, not waiting for normal sync points
   meta: flush_handlers
