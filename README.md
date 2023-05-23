@@ -50,6 +50,8 @@ You may need:
 4. To configure the Azure IoT Hub name by adding `IoTHubName='<IoTHubName>'`
 5. To configure the Azure IoT Hub connection string by adding `connectionString='<connectionString>'`
 6. To set your user Id/Name of the Azure Active Directory by adding userId='<AD user>'. This is needed to handle the IoT devices from the the IoT App.
+7. To set the user of docker registry for pulling the docker image, use `docker_user=<docker_user>`
+8. To set the password of docker registry for pulling the docker image, use `docker_password=<docker_password>`
 
 
 You may also configure the collector devices in [conf](https://github.com/John-ltf/smartHomeOnCloud/blob/master/home/ansible/roles/runCollectors/vars/vars.yaml) file.
