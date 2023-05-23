@@ -5,6 +5,14 @@ jobs:
   publish-hello-docker-image:
     runs-on: ubuntu-latest
     steps:
+      - name: dump
+        run: |
+          echo 'github.workspace === ${{ github.workspace }}'
+          echo "GITHUB_WORKSPACE === $GITHUB_WORKSPACE"
+          echo 'runner.workspace === ${{ runner.workspace }}'
+          echo "RUNNER_WORKSPACE === $RUNNER_WORKSPACE"
+          ls
+          
       - uses: actions/checkout@v2
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v1
