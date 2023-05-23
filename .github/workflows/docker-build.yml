@@ -13,8 +13,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.TOKEN }}
       
-      - name: Build the hello-docker Docker image
+      - name: Build theDocker image
         run: docker buildx build --platform linux/arm/v7 ./appCollector/ --tag ghcr.io/john-ltf/collector-armv7:1.0
         
-      - name: Push the hello-docker Docker image
+      - name: Push the Docker image
         run: docker push ghcr.io/john-ltf/collector-armv7:1.0
