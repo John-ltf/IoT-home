@@ -17,4 +17,4 @@ jobs:
         run: docker build ./appCollector/ --tag collector:1.0
         
       - name: Push the hello-docker Docker image
-        run: docker push ghcr.io/John-ltf/collector:1.0
+        run: docker push ghcr.io/john-ltf/collector:1.0
