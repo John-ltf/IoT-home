@@ -4,7 +4,7 @@
 - name: Start Container
   docker_container:
     name: "{{ outer_item.item.name }}_{{ item | replace(':','_') }}"
-    image: "collector:{{ image_tag }}"
+    image: "ghcr.io/john-ltf/collector:{{ image_tag }}"
     command: "python3 collectData.py -v --device {{outer_item.item.device}} --deviceName {{outer_item.item.name}} --interval {{outer_item.item.interval}} --mac {{item}} --iot '{{IoTHubName}}' --userId '{{userId}}' --connectionString '{{connectionString}}'"
     state: started
     restart_policy: always
